@@ -2,6 +2,7 @@
 Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2009-2010 Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc. 
 
 http://www.cocos2d-x.org
 
@@ -28,6 +29,13 @@ THE SOFTWARE.
 #include "CCTMXLayer.h"
 #include "CCSprite.h"
 #include "CCPointExtension.h"
+#include "CCTextureCache.h"
+#include "CCFileUtils.h"
+#include "cocoa/CCNS.h"
+#include "CCDirector.h"
+
+#include <sstream>
+#include <limits>
 
 namespace cocos2d{
 
@@ -43,18 +51,25 @@ namespace cocos2d{
         CC_SAFE_DELETE(pRet);
 		return NULL;
 	}
+	
 	bool CCTMXTiledMap::initWithTMXFile(const char *tmxFile)
 	{
 		CCAssert(tmxFile != NULL && strlen(tmxFile)>0, "TMXTiledMap: tmx file should not bi nil");
 		
 		setContentSize(CCSizeZero);
-
+		
 		CCTMXMapInfo *mapInfo = CCTMXMapInfo::formatWithTMXFile(tmxFile);
-    
+		
         if (! mapInfo)
         {
             return false;
         }
+		
+		return initWithTMXMapInfo(mapInfo);
+	}
+	
+	bool CCTMXTiledMap::initWithTMXMapInfo(CCTMXMapInfo *mapInfo)
+	{
 		CCAssert( mapInfo->getTilesets()->count() != 0, "TMXTiledMap: Map not found. Please check the filename.");
 
 		m_tMapSize = mapInfo->getMapSize();
@@ -84,8 +99,9 @@ namespace cocos2d{
 				layerInfo = *it;
 				if (layerInfo && layerInfo->m_bVisible)
 				{
+#if MULTI_TILESETS_PER_LAYER == 0
 					CCTMXLayer *child = parseLayer(layerInfo, mapInfo);
-					addChild((CCNode*)child, idx, idx);
+					addChild((CCNode*)child, layerInfo->m_zOrder, idx);
 
                     // record the CCTMXLayer object by it's name
                     std::string layerName = child->getLayerName();
@@ -99,8 +115,38 @@ namespace cocos2d{
 					this->setContentSize(currentSize);
 
 					idx++;
+#else
+					CCArray *childs = parseLayers(layerInfo, mapInfo);
+					for (unsigned int i = 0; i < childs->count(); i++)
+					{
+						CCTMXLayer *child = (CCTMXLayer*)childs->objectAtIndex(i);
+
+						addChild((CCNode*)child, idx, idx);
+
+						std::string layerName = child->getLayerName();
+						if (childs->count() > 1)
+						{
+							std::ostringstream strName;
+							strName << layerName << "_duplicate" << i;
+							layerName = strName.str();
+						}
+
+						m_pTMXLayers->setObject(child, layerName);
+
+						// update content size with the max size
+						const CCSize& childSize = child->getContentSize();
+						CCSize currentSize = this->getContentSize();
+						currentSize.width = MAX( currentSize.width, childSize.width );
+						currentSize.height = MAX( currentSize.height, childSize.height );
+						this->setContentSize(currentSize);
+
+						idx++;
+					}
+#endif
 				}
 			}
+
+				idx++;
 		}
 		return true;
 	}
@@ -143,16 +189,58 @@ namespace cocos2d{
 	// private
 	CCTMXLayer * CCTMXTiledMap::parseLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
 	{
-		CCTMXTilesetInfo *tileset = tilesetForLayer(layerInfo, mapInfo);
-		CCTMXLayer *layer = CCTMXLayer::layerWithTilesetInfo(tileset, layerInfo, mapInfo);
+		CCTMXLayer *layer = NULL;
 
 		// tell the layerinfo to release the ownership of the tiles map.
 		layerInfo->m_bOwnTiles = false;
-		layer->setupTiles();
+
+		CCTMXTilesetInfo *tileset = tilesetForLayer(layerInfo, mapInfo);
+		if (tileset && tileset->m_sAtlasSourceImage.empty())
+		{
+			layer = CCTMXLayer::layerWithTilesetInfo(tileset, layerInfo, mapInfo);
+			layer->setupTiles();
+		}
+		else
+		{
+			layer = CCTMXLayer::layerWithAtlasInfo(tileset, layerInfo, mapInfo);
+			layer->setupTilesWithAtlas();
+		}
 
 		return layer;
 	}
-	
+	CCArray* CCTMXTiledMap::parseLayers(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
+	{
+		CCArray* layers = CCArray::array();
+		layers->retain();
+
+		// tell the layerinfo to release the ownership of the tiles map.
+		layerInfo->m_bOwnTiles = false;
+
+		CCArray *tilesets = tilesetsForLayer(layerInfo, mapInfo);
+		for (unsigned int i = 0; i < tilesets->count(); i++)
+		{
+			CCTMXTilesetInfo* tileset = (CCTMXTilesetInfo*)tilesets->objectAtIndex(i);
+
+			CCTMXLayer *layer = NULL;
+
+			if (tileset && tileset->m_sAtlasSourceImage.empty())
+			{
+				layer = CCTMXLayer::layerWithTilesetInfo(tileset, layerInfo, mapInfo);
+				layer->setupTiles();
+			}
+			else
+			{
+				layer = CCTMXLayer::layerWithAtlasInfo(tileset, layerInfo, mapInfo);
+				layer->setupTilesWithAtlas();
+			}
+			layers->addObject(layer);
+		}
+
+		tilesets->release();
+
+		return layers;
+	}
+
 	CCTMXTilesetInfo * CCTMXTiledMap::tilesetForLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
 	{
 		CCSize size = layerInfo->m_tLayerSize;
@@ -197,7 +285,48 @@ namespace cocos2d{
 		CCLOG("cocos2d: Warning: TMX Layer '%@' has no tiles", layerInfo->m_sName.c_str());
 		return NULL;
 	}
+	CCArray* CCTMXTiledMap::tilesetsForLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
+	{
+		CCArray* resTilesets = CCArray::array();
+		resTilesets->retain();
 
+		CCSize size = layerInfo->m_tLayerSize;
+		CCMutableArray<CCTMXTilesetInfo*>* tilesets = mapInfo->getTilesets();
+		if (tilesets && tilesets->count()>0)
+		{
+			unsigned int tsFirstGidPrev = 2147483647;
+
+			CCTMXTilesetInfo *tileset = NULL;
+			CCMutableArray<CCTMXTilesetInfo*>::CCMutableArrayRevIterator rit;
+			for (rit = tilesets->rbegin(); rit != tilesets->rend(); ++rit)
+			{
+				tileset = *rit;
+				if (tileset)
+				{
+					for( unsigned int y=0; y < size.height; y++ )
+					{
+						for( unsigned int x=0; x < size.width; x++ ) 
+						{
+							unsigned int pos = (unsigned int)(x + size.width * y);
+							unsigned int gid = layerInfo->m_pTiles[ pos ];
+
+							// XXX: gid == 0 --> empty tile
+							if( gid != 0 ) 
+							{
+								if( gid >= tileset->m_uFirstGid && gid < tsFirstGidPrev )
+								{
+									if (!resTilesets->containsObject(tileset))
+										resTilesets->addObject(tileset);
+								}
+							}
+						}
+					}		
+					tsFirstGidPrev = tileset->m_uFirstGid;
+				}
+			}
+		}
+		return resTilesets;
+	}
 
 	// public
 	CCTMXLayer * CCTMXTiledMap::layerNamed(const char *layerName)
@@ -235,7 +364,6 @@ namespace cocos2d{
 	{
 		return m_pTileProperties->objectForKey(GID);
 	}
-		
 
 }// namespace cocos2d
 

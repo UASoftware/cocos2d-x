@@ -82,6 +82,11 @@ namespace cocos2d {
 		/** initializes a CCTMXLayer with a tileset info, a layer info and a map info */
 		bool initWithTilesetInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
 
+		/** creates a CCTMXLayer with an tileset info, a layer info and a map info */
+		static CCTMXLayer * layerWithAtlasInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
+		/** initializes a CCTMXLayer with a tileset info, a layer info and a map info */
+		bool initWithAtlasInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
+
 		/** dealloc the map that contains the tile position from memory.
 		Unless you want to know at runtime the tiles positions, you can safely call this method.
 		If you are going to call layer->tileGIDAt() then, don't release the map
@@ -120,6 +125,7 @@ namespace cocos2d {
 
 		/** Creates the tiles */
 		void setupTiles();
+		void setupTilesWithAtlas();
 
 		/** CCTMXLayer doesn't support adding a CCSprite manually.
 		@warning addchild(z, tag); is not supported on CCTMXLayer. Instead of setTileGID.
@@ -142,6 +148,8 @@ namespace cocos2d {
 		CCSprite* appendTileForGID(unsigned int gid, const CCPoint& pos);
 		CCSprite* insertTileForGID(unsigned int gid, const CCPoint& pos);
 		CCSprite* updateTileForGID(unsigned int gid, const CCPoint& pos);
+
+		CCSprite* appendTileForGIDFromAtlas(unsigned int gid, const CCPoint& pos);
 
 		/* The layer recognizes some special properties, like cc_vertez */
 		void parseInternalProperties();

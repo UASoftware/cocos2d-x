@@ -81,6 +81,8 @@ namespace cocos2d{
     bool CCMenu::init()
     {
         va_list args;
+		memset(&args, 0, sizeof(va_list));
+		
         return initWithItems(NULL, args);
     }
 

@@ -2,6 +2,7 @@
 Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2009-2010 Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc. 
 
 http://www.cocos2d-x.org
 
@@ -27,6 +28,9 @@ THE SOFTWARE.
 #define __CCTMX_TILE_MAP_H__
 #include "CCNode.h"
 #include "CCTMXObjectGroup.h"
+
+#define MULTI_TILESETS_PER_LAYER	1
+#define ATLAS_INSTEAD_TILESET		0
 
 namespace cocos2d {
 
@@ -121,6 +125,9 @@ namespace cocos2d {
 
 		/** initializes a TMX Tiled Map with a TMX file */
 		bool initWithTMXFile(const char *tmxFile);
+		
+		/** initializes a TMX Tiled Map with a TMX map info */
+		virtual bool initWithTMXMapInfo(CCTMXMapInfo *mapInfo);		
 
 		/** return the TMXLayer for the specific layer */
 		CCTMXLayer* layerNamed(const char *layerName);
@@ -134,15 +141,20 @@ namespace cocos2d {
 		/** return properties dictionary for tile GID */
 		CCDictionary<std::string, CCString*> *propertiesForGID(int GID);
 
-	private:
+	protected:
  		CCTMXLayer * parseLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
+		CCArray* parseLayers(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
  		CCTMXTilesetInfo * tilesetForLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
+		CCArray* tilesetsForLayer(CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo);
+
+		CCNode* parseObject(CCTMXObjectGroup *objectInfo, CCTMXMapInfo *mapInfo);
+		CCTMXTilesetInfo* tilesetForObjectGroup(CCTMXObjectGroup *objectGroupInfo, CCTMXMapInfo *mapInfo);
+		CCTMXTilesetInfo* tilesetForObject(int gid, CCTMXMapInfo *mapInfo);
 
 	protected:
 		//! tile properties
         CCDictionary<int, CCStringToStringDictionary*> *m_pTileProperties;
         CCDictionary<std::string, CCTMXLayer*> *m_pTMXLayers;
-
 	};
 
 }// namespace cocos2d

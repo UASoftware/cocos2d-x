@@ -2,6 +2,7 @@
 Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2009-2010 Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc. 
 
 http://www.cocos2d-x.org
 
@@ -82,6 +83,9 @@ namespace cocos2d {
 		unsigned int		m_uMinGID;
 		unsigned int		m_uMaxGID;
 		CCPoint				m_tOffset;
+		
+		// Z-irder of this layer
+		int	m_zOrder;
 	public:
 		CCTMXLayerInfo();
 		virtual ~CCTMXLayerInfo();
@@ -107,8 +111,11 @@ namespace cocos2d {
 		unsigned int	m_uMargin;
 		//! filename containing the tiles (should be spritesheet / texture atlas)
 		std::string		m_sSourceImage;
+		std::string		m_sAtlasSourceImage;
+		std::string		m_sExternalTilesetFilename;
 		//! size in pixels of the image
 		CCSize			m_tImageSize;
+		CCPoint			m_tOffset;
 	public:
 		CCTMXTilesetInfo();
 		virtual ~CCTMXTilesetInfo();
@@ -183,6 +190,8 @@ namespace cocos2d {
 		std::string m_sCurrentString;
 		//! tile properties
 		CCDictionary<int, CCStringToStringDictionary*>* m_pTileProperties;
+		//! The z-order of current layer
+		int m_CurrentLayerZOrder;
 	};
 
 }// namespace cocos2d

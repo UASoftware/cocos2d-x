@@ -3,6 +3,7 @@ Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2010      Neophit
 Copyright (c) 2010      Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc. 
 
 http://www.cocos2d-x.org
 
@@ -32,7 +33,8 @@ namespace cocos2d {
 
 	CCTMXObjectGroup::CCTMXObjectGroup()
         :m_tPositionOffset(CCPointZero)
-		,m_sGroupName("")		
+		,m_sGroupName("")
+		,m_zOrder(0)
 	{
 		m_pObjects = new CCMutableArray<CCStringToStringDictionary*>();
 		m_pProperties = new CCStringToStringDictionary();
@@ -85,5 +87,16 @@ namespace cocos2d {
 		CC_SAFE_RELEASE(m_pObjects);
 		m_pObjects = objects;
 	}
+	
+	void CCTMXObjectGroup::setZOrder(int zOrder)
+	{
+		m_zOrder = zOrder;
+	}
+	
+	int CCTMXObjectGroup::getZOrder() const
+	{
+		return m_zOrder;
+	}
+
 
 }// namespace cocos2d

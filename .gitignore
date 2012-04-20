@@ -53,6 +53,7 @@ build_*_xcode/
 xcschememanagement.plist
 build/
 .DS_Store
+xcuserdata
 
 # Ignore files built by bada
 .Simulator-Debug/

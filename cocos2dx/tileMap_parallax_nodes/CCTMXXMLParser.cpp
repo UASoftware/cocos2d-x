@@ -3,6 +3,7 @@ Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2011		Максим Аксенов 
 Copyright (c) 2009-2010 Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc.
 
 http://www.cocos2d-x.org
 
@@ -71,6 +72,7 @@ namespace cocos2d {
 		, m_uMinGID(100000)
 		, m_uMaxGID(0)		
 		, m_tOffset(CCPointZero)
+		, m_zOrder(0)
 	{
 		m_pProperties= new CCStringToStringDictionary();;
 	}
@@ -102,6 +104,7 @@ namespace cocos2d {
 		,m_uSpacing(0)
 		,m_uMargin(0)
 		,m_tImageSize(CCSizeZero)
+		,m_tOffset(CCPointZero)
 	{
 	}
 	CCTMXTilesetInfo::~CCTMXTilesetInfo()
@@ -160,6 +163,7 @@ namespace cocos2d {
         ,m_bStoringCharacters(false)		
 		,m_pProperties(NULL)
 		,m_pTileProperties(NULL)
+		,m_CurrentLayerZOrder(0)
 	{
 	}
 	CCTMXMapInfo::~CCTMXMapInfo()
@@ -285,10 +289,14 @@ namespace cocos2d {
 		else if(elementName == "tileset") 
 		{
 			// If this is an external tileset then start parsing that
+			static std::string sExternalTilesetFilename = "";
+			static unsigned int iExternalTilesetFirstgid = 0;
 			std::string externalTilesetFilename = valueForKey("source", attributeDict);
 			if (externalTilesetFilename != "")
 			{
 				externalTilesetFilename = CCFileUtils::fullPathFromRelativeFile(externalTilesetFilename.c_str(), pTMXMapInfo->getTMXFileName());
+				sExternalTilesetFilename = externalTilesetFilename;
+				iExternalTilesetFirstgid = (unsigned int)atoi(valueForKey("firstgid", attributeDict));
 				pTMXMapInfo->parseXMLFile(externalTilesetFilename.c_str());
 			}
 			else
@@ -303,6 +311,68 @@ namespace cocos2d {
 				s.height = (float)atof(valueForKey("tileheight", attributeDict));
 				tileset->m_tTileSize = s;
 
+				tileset->m_sAtlasSourceImage = "";
+				tileset->m_sExternalTilesetFilename = "";
+
+				std::string atlasName = tileset->m_sName;
+				atlasName = atlasName.append(".plist");
+
+				std::string atlasPath = "";
+				if (sExternalTilesetFilename.empty())
+				{
+					atlasPath = CCFileUtils::fullPathFromRelativeFile(atlasName.c_str(), pTMXMapInfo->getTMXFileName());
+				}
+				else
+				{
+					atlasPath = CCFileUtils::fullPathFromRelativeFile(atlasName.c_str(), sExternalTilesetFilename.c_str());
+					tileset->m_sExternalTilesetFilename = sExternalTilesetFilename;
+					tileset->m_uFirstGid = iExternalTilesetFirstgid;
+				}
+
+				sExternalTilesetFilename = "";
+				iExternalTilesetFirstgid = 0;
+
+#if ATLAS_INSTEAD_TILESET == 1
+				FILE *fp = fopen(atlasPath.c_str(), "r");
+				if (fp)
+				{
+					CCDictionary<std::string, CCObject*> *dict = CCFileUtils::dictionaryWithContentsOfFileThreadSafe(atlasPath.c_str());
+	
+					string texturePath("");
+
+					CCDictionary<std::string, CCObject*>* metadataDict = (CCDictionary<std::string, CCObject*>*)dict->objectForKey(string("metadata"));
+					if (metadataDict)
+					{
+						// try to read  texture file name from meta data
+						CCString *pString = (CCString*)metadataDict->objectForKey(std::string("textureFileName"));
+						texturePath = string(pString ? pString->m_sString.c_str() : "");
+					}
+
+					if (! texturePath.empty())
+					{
+						// build texture path relative to plist file
+						texturePath = CCFileUtils::fullPathFromRelativeFile(texturePath.c_str(), atlasPath.c_str());
+					}
+					else
+					{
+						// build texture path by replacing file extension
+						texturePath = atlasPath;
+
+						// remove .xxx
+						size_t startPos = texturePath.find_last_of("."); 
+						texturePath = texturePath.erase(startPos);
+
+						// append .png
+						texturePath = texturePath.append(".png");
+					}
+
+					tileset->m_sAtlasSourceImage = texturePath;
+
+					dict->release();
+
+					fclose(fp);
+				}
+#endif
 				pTMXMapInfo->getTilesets()->addObject(tileset);
 				tileset->release();
 			}
@@ -322,6 +392,9 @@ namespace cocos2d {
 		{
 			CCTMXLayerInfo *layer = new CCTMXLayerInfo();
 			layer->m_sName = valueForKey("name", attributeDict);
+			
+			// set z-order for layer
+			layer->m_zOrder = m_CurrentLayerZOrder++;
 
 			CCSize s;
 			s.width = (float)atof(valueForKey("width", attributeDict));
@@ -356,6 +429,10 @@ namespace cocos2d {
 		{
 			CCTMXObjectGroup *objectGroup = new CCTMXObjectGroup();
 			objectGroup->setGroupName(valueForKey("name", attributeDict));
+			
+			// set z-order for objectGroup
+			objectGroup->setZOrder(m_CurrentLayerZOrder++);	
+			
 			CCPoint positionOffset;
 			positionOffset.x = (float)atof(valueForKey("x", attributeDict)) * pTMXMapInfo->getTileSize().width;
 			positionOffset.y = (float)atof(valueForKey("y", attributeDict)) * pTMXMapInfo->getTileSize().height;
@@ -373,9 +450,21 @@ namespace cocos2d {
 			CCTMXTilesetInfo *tileset = pTMXMapInfo->getTilesets()->getLastObject();
 
 			// build full path
-			std::string imagename = valueForKey("source", attributeDict);		
-			tileset->m_sSourceImage = CCFileUtils::fullPathFromRelativeFile(imagename.c_str(), pTMXMapInfo->getTMXFileName());
-
+			std::string imagename = std::string(valueForKey("source", attributeDict));
+			if (tileset->m_sExternalTilesetFilename.empty())
+			{
+				tileset->m_sSourceImage = CCFileUtils::fullPathFromRelativeFile(imagename.c_str(), pTMXMapInfo->getTMXFileName());
+			}
+			else
+			{
+				tileset->m_sSourceImage = CCFileUtils::fullPathFromRelativeFile(imagename.c_str(), tileset->m_sExternalTilesetFilename.c_str());
+			}
+		} 
+		else if(elementName == "tileoffset")
+		{
+			CCTMXTilesetInfo *tileset = pTMXMapInfo->getTilesets()->getLastObject();
+			tileset->m_tOffset.x = (float)atof(valueForKey("x", attributeDict));
+			tileset->m_tOffset.y = (float)atof(valueForKey("y", attributeDict));
 		} 
 		else if(elementName == "data")
 		{
@@ -418,6 +507,14 @@ namespace cocos2d {
 			dict->setObject(value, key);
 			value->release();
 
+			//  gid setter 
+			int gid = atoi(valueForKey("gid", attributeDict));
+			key = "gid";
+			sprintf(buffer, "%d", gid);
+			value = new CCString(buffer);
+			dict->setObject(value, key);
+			value->release();
+
 			// Assign all the attributes as key/name pairs in the properties dictionary
 			key = "type";
 			value = new CCString(valueForKey("type", attributeDict));
@@ -433,7 +530,7 @@ namespace cocos2d {
 
 			int y = atoi(valueForKey("y", attributeDict)) + (int)objectGroup->getPositionOffset().y;
 			// Correct y position. (Tiled uses Flipped, cocos2d uses Standard)
-			y = (int)(pTMXMapInfo->getMapSize().height * pTMXMapInfo->getTileSize().height) - y - atoi(valueForKey("height", attributeDict));
+			//y = (int)(pTMXMapInfo->getMapSize().height * pTMXMapInfo->getTileSize().height) - y - atoi(valueForKey("height", attributeDict));
 			key = "y";
 			sprintf(buffer, "%d", y);
 			value = new CCString(buffer);

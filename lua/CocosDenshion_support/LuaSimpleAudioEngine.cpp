@@ -773,6 +773,7 @@ TOLUA_API int tolua_SimpleAudioEngine_open (lua_State* tolua_S)
 
 
 #if defined(LUA_VERSION_NUM) && LUA_VERSION_NUM >= 501
+TOLUA_API int luaopen_SimpleAudioEngine (lua_State* tolua_S);
  TOLUA_API int luaopen_SimpleAudioEngine (lua_State* tolua_S) {
  return tolua_SimpleAudioEngine_open(tolua_S);
 };

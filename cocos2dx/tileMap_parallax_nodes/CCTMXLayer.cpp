@@ -31,6 +31,8 @@ THE SOFTWARE.
 #include "CCPointExtension.h"
 #include "support/data_support/ccCArray.h"
 #include "CCDirector.h"
+#include "CCFileUtils.h"
+#include "cocoa/CCNS.h"
 
 namespace cocos2d {
 
@@ -96,6 +98,69 @@ namespace cocos2d {
 		}
 		return false;
 	}
+
+	// CCTMXLayer - init & alloc & dealloc
+	CCTMXLayer * CCTMXLayer::layerWithAtlasInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
+	{
+		CCTMXLayer *pRet = new CCTMXLayer();
+		if (pRet->initWithAtlasInfo(tilesetInfo, layerInfo, mapInfo))
+		{
+			pRet->autorelease();
+			return pRet;
+		}
+		return NULL;
+	}
+	bool CCTMXLayer::initWithAtlasInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
+	{
+		// XXX: is 35% a good estimate ?
+		CCSize size = layerInfo->m_tLayerSize;
+		float totalNumberOfTiles = size.width * size.height;
+		float capacity = totalNumberOfTiles * 0.35f + 1; // 35 percent is occupied ?
+
+		CCTexture2D *texture = NULL;
+		if( tilesetInfo )
+		{
+			texture = CCTextureCache::sharedTextureCache()->addImage(tilesetInfo->m_sAtlasSourceImage.c_str());
+		}
+
+		if (CCSpriteBatchNode::initWithTexture(texture, (unsigned int)capacity))
+		{
+			// layerInfo
+			m_sLayerName = layerInfo->m_sName;
+			m_tLayerSize = layerInfo->m_tLayerSize;
+			m_pTiles = layerInfo->m_pTiles;
+			m_uMinGID = layerInfo->m_uMinGID;
+			m_uMaxGID = layerInfo->m_uMaxGID;
+			m_cOpacity = layerInfo->m_cOpacity;
+			m_pProperties = CCStringToStringDictionary::dictionaryWithDictionary(layerInfo->getProperties());
+			m_fContentScaleFactor = CCDirector::sharedDirector()->getContentScaleFactor(); 
+
+			// tilesetInfo
+			m_pTileSet = tilesetInfo;
+			CC_SAFE_RETAIN(m_pTileSet);
+
+			// mapInfo
+			m_tMapTileSize = mapInfo->getTileSize();
+			m_uLayerOrientation = mapInfo->getOrientation();
+
+			// offset (after layer orientation is set);
+			CCPoint offset = this->calculateLayerOffset(layerInfo->m_tOffset);
+			this->setPosition(offset);
+
+			m_pAtlasIndexArray = ccCArrayNew((unsigned int)totalNumberOfTiles);
+
+			this->setContentSizeInPixels(CCSizeMake(m_tLayerSize.width * m_tMapTileSize.width, m_tLayerSize.height * m_tMapTileSize.height));
+                        m_tMapTileSize.width /= m_fContentScaleFactor;
+                        m_tMapTileSize.height /= m_fContentScaleFactor;
+
+			m_bUseAutomaticVertexZ = false;
+			m_nVertexZvalue = 0;
+			m_fAlphaFuncValue = 0;
+			return true;
+		}
+		return false;
+	}
+
 	CCTMXLayer::CCTMXLayer()
         :m_tLayerSize(CCSizeZero)
         ,m_tMapTileSize(CCSizeZero)
@@ -187,9 +252,58 @@ namespace cocos2d {
 				}
 			}
 		}
-
+#if MULTI_TILESETS_PER_LAYER == 0
 		CCAssert( m_uMaxGID >= m_pTileSet->m_uFirstGid &&
 			m_uMinGID >= m_pTileSet->m_uFirstGid, "TMX: Only 1 tilset per layer is supported");	
+#endif			
+	}
+
+	// CCTMXLayer - setup Tiles
+	void CCTMXLayer::setupTilesWithAtlas()
+	{	
+		// Optimization: quick hack that sets the image size on the tileset
+		m_pTileSet->m_tImageSize = m_pobTextureAtlas->getTexture()->getContentSizeInPixels();
+
+		// By default all the tiles are aliased
+		// pros:
+		//  - easier to render
+		// cons:
+		//  - difficult to scale / rotate / etc.
+		m_pobTextureAtlas->getTexture()->setAliasTexParameters();
+
+		//CFByteOrder o = CFByteOrderGetCurrent();
+
+		// Parse cocos2d properties
+		this->parseInternalProperties();
+
+		for( unsigned int y=0; y < m_tLayerSize.height; y++ ) 
+		{
+			for( unsigned int x=0; x < m_tLayerSize.width; x++ ) 
+			{
+				unsigned int pos = (unsigned int)(x + m_tLayerSize.width * y);
+				unsigned int gid = m_pTiles[ pos ];
+
+				// gid are stored in little endian.
+				// if host is big endian, then swap
+				//if( o == CFByteOrderBigEndian )
+				//	gid = CFSwapInt32( gid );
+				/* We support little endian.*/
+
+				// XXX: gid == 0 --> empty tile
+				if( gid != 0 ) 
+				{
+					this->appendTileForGIDFromAtlas(gid, ccp((float)x, (float)y));
+
+					// Optimization: update min and max GID rendered by the layer
+					m_uMinGID = MIN(gid, m_uMinGID);
+					m_uMaxGID = MAX(gid, m_uMaxGID);
+				}
+			}
+		}
+#if MULTI_TILESETS_PER_LAYER == 0
+		CCAssert( m_uMaxGID >= m_pTileSet->m_uFirstGid &&
+			m_uMinGID >= m_pTileSet->m_uFirstGid, "TMX: Only 1 tilset per layer is supported");	
+#endif
 	}
 
 	// CCTMXLayer - Properties
@@ -242,11 +356,13 @@ namespace cocos2d {
 				CCRect rect = m_pTileSet->rectForGID(gid);
                                 rect = CCRectMake(rect.origin.x / m_fContentScaleFactor, rect.origin.y / m_fContentScaleFactor, rect.size.width/ m_fContentScaleFactor, rect.size.height/ m_fContentScaleFactor);
 
+				CCPoint anchorPoint = CCPointMake(m_pTileSet->m_tOffset.x / rect.size.width, m_pTileSet->m_tOffset.y / rect.size.height);
+
 				tile = new CCSprite();
 				tile->initWithBatchNode(this, rect);
 				tile->setPosition(positionAt(pos));
 				tile->setVertexZ((float)vertexZForPos(pos));
-				tile->setAnchorPoint(CCPointZero);
+				tile->setAnchorPoint(anchorPoint);
 				tile->setOpacity(m_cOpacity);
 
 				unsigned int indexForZ = atlasIndexForExistantZ(z);
@@ -282,9 +398,13 @@ namespace cocos2d {
 		{
 			m_pReusedTile->initWithBatchNode(this, rect);
 		}
+
+
+		CCPoint anchorPoint = CCPointMake(m_pTileSet->m_tOffset.x / rect.size.width, m_pTileSet->m_tOffset.y / rect.size.height);
+
 		m_pReusedTile->setPositionInPixels(positionAt(pos));
 		m_pReusedTile->setVertexZ((float)vertexZForPos(pos));
-		m_pReusedTile->setAnchorPoint(CCPointZero);
+		m_pReusedTile->setAnchorPoint(anchorPoint);
 		m_pReusedTile->setOpacity(m_cOpacity);
 
 		// get atlas index
@@ -332,9 +452,11 @@ namespace cocos2d {
 			m_pReusedTile->initWithBatchNode(this, rect);
 		}
 		
+		CCPoint anchorPoint = CCPointMake(m_pTileSet->m_tOffset.x / rect.size.width, m_pTileSet->m_tOffset.y / rect.size.height);
+
 		m_pReusedTile->setPositionInPixels(positionAt(pos));
 		m_pReusedTile->setVertexZ((float)vertexZForPos(pos));
-		m_pReusedTile->setAnchorPoint(CCPointZero);
+		m_pReusedTile->setAnchorPoint(anchorPoint);
 		m_pReusedTile->setOpacity(m_cOpacity);
 
 		// get atlas index
@@ -365,10 +487,101 @@ namespace cocos2d {
 		{
 			m_pReusedTile->initWithBatchNode(this, rect);
 		}
-		
+
+		CCPoint anchorPoint = CCPointMake(m_pTileSet->m_tOffset.x / rect.size.width, m_pTileSet->m_tOffset.y / rect.size.height);
+
 		m_pReusedTile->setPosition(positionAt(pos));
 		m_pReusedTile->setVertexZ((float)vertexZForPos(pos));
-		m_pReusedTile->setAnchorPoint(CCPointZero);
+		m_pReusedTile->setAnchorPoint(anchorPoint);
+		m_pReusedTile->setOpacity(m_cOpacity);
+
+		// optimization:
+		// The difference between appendTileForGID and insertTileforGID is that append is faster, since
+		// it appends the tile at the end of the texture atlas
+		unsigned int indexForZ = m_pAtlasIndexArray->num;
+
+		// don't add it using the "standard" way.
+		addQuadFromSprite(m_pReusedTile, indexForZ);
+
+		// append should be after addQuadFromSprite since it modifies the quantity values
+		ccCArrayInsertValueAtIndex(m_pAtlasIndexArray, (void*)z, indexForZ);
+
+		return m_pReusedTile;
+	}
+
+
+	// used only when parsing the map. useless after the map was parsed
+	// since lot's of assumptions are no longer true
+	CCSprite * CCTMXLayer::appendTileForGIDFromAtlas(unsigned int gid, const CCPoint& pos)
+	{
+		unsigned int gidInside = gid - m_pTileSet->m_uFirstGid;
+
+		CCRect rect = CCRectMake(0,0,0,0);
+		CCPoint anchorPoint = CCPointMake(0,0);
+
+		std::string atlasName = m_pTileSet->m_sName;
+		atlasName = atlasName.append(".plist");
+
+		std::string sPath = "";
+		if (m_pTileSet->m_sExternalTilesetFilename.empty())
+		{
+			sPath = CCFileUtils::fullPathFromRelativePath(atlasName.c_str());
+		}
+		else
+		{
+			sPath = CCFileUtils::fullPathFromRelativeFile(atlasName.c_str(), m_pTileSet->m_sExternalTilesetFilename.c_str());
+		}
+
+		CCDictionary<std::string, CCObject*> *dict = CCFileUtils::dictionaryWithContentsOfFileThreadSafe(sPath.c_str());
+		CCDictionary<std::string, CCObject*> *framesDict = (CCDictionary<std::string, CCObject*>*)dict->objectForKey(std::string("frames"));
+
+		framesDict->begin();
+		std::string key = "";
+		unsigned int keyIndex = 1;
+		CCDictionary<std::string, CCObject*> *frameDict = NULL;
+		while( (frameDict = (CCDictionary<std::string, CCObject*>*)framesDict->next(&key)) )
+		{
+			if (keyIndex == gidInside)
+			{
+				CCString *spFrame = (CCString*)frameDict->objectForKey(std::string("frame"));
+				CCRect rectInPixels = CCRectFromString(spFrame ? spFrame->m_sString.c_str() : "");
+				rect = CC_RECT_PIXELS_TO_POINTS(rectInPixels);
+
+				bool rotated = false;
+
+				CCString *spRotated = (CCString*)frameDict->objectForKey(std::string("rotated"));
+				rotated = atoi(spRotated ? spRotated->m_sString.c_str() : "") == 0 ? false : true;
+
+				CCString *spOffset = (CCString*)frameDict->objectForKey(std::string("offset"));
+				CCPoint offset = CCPointFromString(spOffset ? spOffset->m_sString.c_str() : "");
+
+				anchorPoint = CCPointMake(offset.x / rect.size.width, offset.y / rect.size.height);
+
+				CCString *spSourceSize = (CCString*)frameDict->objectForKey(std::string("sourceSize"));
+				CCSize sourceSize = CCSizeFromString(spSourceSize ? spSourceSize->m_sString.c_str() : "");
+
+				break;
+			}
+			keyIndex++;
+		}
+
+		dict->release();
+
+		int z = (int)(pos.x + pos.y * m_tLayerSize.width);
+
+		if( ! m_pReusedTile )
+		{
+			m_pReusedTile = new CCSprite();
+			m_pReusedTile->initWithBatchNode(this, rect);
+		}
+		else
+		{
+			m_pReusedTile->initWithBatchNode(this, rect);
+		}
+
+		m_pReusedTile->setPosition(positionAt(pos));
+		m_pReusedTile->setVertexZ((float)vertexZForPos(pos));
+		m_pReusedTile->setAnchorPoint(anchorPoint);
 		m_pReusedTile->setOpacity(m_cOpacity);
 
 		// optimization:

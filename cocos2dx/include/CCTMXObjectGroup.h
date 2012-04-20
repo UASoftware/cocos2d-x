@@ -3,6 +3,7 @@ Copyright (c) 2010-2011 cocos2d-x.org
 Copyright (c) 2010      Neophit
 Copyright (c) 2010      Ricardo Quesada
 Copyright (c) 2011      Zynga Inc.
+Copyright (c) 2012		UA Software Inc. 
 
 http://www.cocos2d-x.org
 
@@ -59,9 +60,14 @@ namespace cocos2d {
 		It will return the 1st object found on the array for the given name.
 		*/
 		CCStringToStringDictionary *objectNamed(const char *objectName);
+		
+		void setZOrder(int zOrder);
+		int getZOrder() const;
 	protected:	
 		/** name of the group */
 		std::string m_sGroupName;
+		// Z-irder of this object group
+		int	m_zOrder;			
 	};
 
 }// namespace cocos2d

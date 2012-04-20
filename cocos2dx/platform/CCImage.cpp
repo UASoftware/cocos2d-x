@@ -22,17 +22,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ****************************************************************************/
 
-
 #include "CCImage.h"
 #include "CCCommon.h"
 #include "CCStdC.h"
 #include "CCFileUtils.h"
-#include "png.h"
 #include <string>
 #include <ctype.h>
 
 #if (CC_TARGET_PLATFORM != CC_PLATFORM_IOS) 
 // on ios, we should use platform/ios/CCImage_ios.mm instead
+#define PNG_NO_PEDANTIC_WARNINGS
+#include "png.h"
 
 #define  QGLOBAL_H        // defined for wophone
 #include "jpeglib.h"
