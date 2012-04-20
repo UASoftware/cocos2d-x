@@ -66,6 +66,8 @@ public:
 	CCRect  getViewPort();
 	float   getScreenScaleFactor();
     void    setIMEKeyboardState(bool bOpen);
+    
+    float   getMainScreenScale() { return 1.0f; }
 
     bool 	HandleEvents();
 
@@ -104,6 +106,8 @@ private:
 	
 	EGLTouchDelegate   *m_pDelegate;
 	float  				m_fScreenScaleFactor;
+
+	bool 				m_isWindowActive;
 
 	static bool 		m_initializedFunctions;
 	static const GLubyte *m_extensions;
