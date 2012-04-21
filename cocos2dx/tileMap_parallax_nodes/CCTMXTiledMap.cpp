@@ -121,7 +121,7 @@ namespace cocos2d{
 					{
 						CCTMXLayer *child = (CCTMXLayer*)childs->objectAtIndex(i);
 
-						addChild((CCNode*)child, idx, idx);
+						addChild((CCNode*)child, layerInfo->m_zOrder, idx);
 
 						std::string layerName = child->getLayerName();
 						if (childs->count() > 1)
@@ -217,6 +217,7 @@ namespace cocos2d{
 		layerInfo->m_bOwnTiles = false;
 
 		CCArray *tilesets = tilesetsForLayer(layerInfo, mapInfo);
+		tilesets->reverseObjects();
 		for (unsigned int i = 0; i < tilesets->count(); i++)
 		{
 			CCTMXTilesetInfo* tileset = (CCTMXTilesetInfo*)tilesets->objectAtIndex(i);

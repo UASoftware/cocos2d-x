@@ -59,7 +59,8 @@ namespace cocos2d {
 		TMXPropertyLayer,
 		TMXPropertyObjectGroup,
 		TMXPropertyObject,
-		TMXPropertyTile
+		TMXPropertyTile,
+		TMXPropertyTileset
 	};
 
 	/** @brief CCTMXLayerInfo contains the information about the layers like:
@@ -103,6 +104,7 @@ namespace cocos2d {
 	*/
 	class CC_DLL CCTMXTilesetInfo : public CCObject
 	{
+		CC_PROPERTY(CCStringToStringDictionary*, m_pProperties, Properties);
 	public:
 		std::string		m_sName;
 		unsigned int	m_uFirstGid;
@@ -182,6 +184,8 @@ namespace cocos2d {
 		inline void setCurrentString(const char *currentString){ m_sCurrentString = currentString; }
 		inline const char* getTMXFileName(){ return m_sTMXFileName.c_str(); }
 		inline void setTMXFileName(const char *fileName){ m_sTMXFileName = fileName; }
+
+		inline int zOrderNext() { return m_CurrentLayerZOrder++; }
 
 	protected:
 		//! tmx filename
