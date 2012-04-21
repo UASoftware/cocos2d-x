@@ -4,7 +4,7 @@
 #if defined(SHP)
 	#include <FBaseConfig.h>
 	#define EXPORT_DLL  _EXPORT_
-#elif defined(_WIN32)
+#elif defined(_WIN32) && !defined(CC_STATIC_LIB)
     #if defined(_EXPORT_DLL_)
     #define EXPORT_DLL     __declspec(dllexport)
     #elif defined(IGNORE_EXPORT)

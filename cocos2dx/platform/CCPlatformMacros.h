@@ -205,7 +205,7 @@ public: virtual void set##funName(varType var)   \
 
 // platform depended macros
 
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) && !defined(CC_STATIC_LIB)
 
     #undef CC_DLL
     #if defined(_USRDLL)

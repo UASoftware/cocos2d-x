@@ -668,7 +668,7 @@ namespace cocos2d{
         }
 
         totalHeight = m_pConfiguration->m_uCommonHeight * quantityOfLines;
-        nextFontPositionY = -(m_pConfiguration->m_uCommonHeight - m_pConfiguration->m_uCommonHeight * quantityOfLines);
+        nextFontPositionY = -int(m_pConfiguration->m_uCommonHeight - m_pConfiguration->m_uCommonHeight * quantityOfLines);
 
 		for (unsigned int i= 0; i < stringLen; i++)
 		{
