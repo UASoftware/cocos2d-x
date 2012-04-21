@@ -106,10 +106,12 @@ namespace cocos2d {
 		,m_tImageSize(CCSizeZero)
 		,m_tOffset(CCPointZero)
 	{
+		m_pProperties = new CCStringToStringDictionary();
 	}
 	CCTMXTilesetInfo::~CCTMXTilesetInfo()
 	{
 		CCLOGINFO("cocos2d: deallocing.");
+		CC_SAFE_RELEASE(m_pProperties);
 	}
 	CCRect CCTMXTilesetInfo::rectForGID(unsigned int gid)
 	{
@@ -121,6 +123,16 @@ namespace cocos2d {
 		rect.origin.x = (gid % max_x) * (m_tTileSize.width + m_uSpacing) + m_uMargin;
 		rect.origin.y = (gid / max_x) * (m_tTileSize.height + m_uSpacing) + m_uMargin;
 		return rect;
+	}
+	CCStringToStringDictionary * CCTMXTilesetInfo::getProperties()
+	{
+		return m_pProperties;
+	}
+	void CCTMXTilesetInfo::setProperties(CCStringToStringDictionary* var)
+	{
+		CC_SAFE_RETAIN(var);
+		CC_SAFE_RELEASE(m_pProperties);
+		m_pProperties = var;
 	}
 
 	// implementation CCTMXMapInfo
@@ -376,6 +388,8 @@ namespace cocos2d {
 				pTMXMapInfo->getTilesets()->addObject(tileset);
 				tileset->release();
 			}
+			// The parent element is now "tileset"
+			pTMXMapInfo->setParentElement(TMXPropertyTileset);
 		}
 		else if(elementName == "tile")
 		{
@@ -612,6 +626,15 @@ namespace cocos2d {
 				CCString *propertyValue = new CCString(valueForKey("value", attributeDict));
 				dict->setObject(propertyValue, propertyName);
 				propertyValue->release();
+			}
+			else if ( pTMXMapInfo->getParentElement() == TMXPropertyTileset ) 
+			{
+				// The parent element is the last tileset
+				CCTMXTilesetInfo *tilesetInfo = pTMXMapInfo->getTilesets()->getLastObject();
+				CCString *value = new CCString(valueForKey("value", attributeDict));
+				std::string key = valueForKey("name", attributeDict);
+				tilesetInfo->getProperties()->setObject(value, key);
+				value->release();
 			}
 		}
 		if (attributeDict)
