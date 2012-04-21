@@ -2,9 +2,11 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := cocos2dx_static
+LOCAL_MODULE := cocos2dx_shared
 
 LOCAL_MODULE_FILENAME := libcocos2d
+
+LOCAL_ARM_MODE := arm
 
 LOCAL_SRC_FILES := \
 CCConfiguration.cpp \
@@ -130,7 +132,13 @@ LOCAL_STATIC_LIBRARIES += jpeg_static_prebuilt
 # define the macro to compile through support/zip_support/ioapi.c                
 LOCAL_CFLAGS := -DUSE_FILE32API
 
-include $(BUILD_STATIC_LIBRARY)
+ifneq ($(APP_OPTIM),debug)
+	LOCAL_CFLAGS += -O3 -DNDEBUG
+else
+	LOCAL_CFLAGS += -DDEBUG -DCOCOS2D_DEBUG=1
+endif #($(APP_OPTIM),debug)
+
+include $(BUILD_SHARED_LIBRARY)
 
 $(call import-add-path,$(LOCAL_PATH)/..)
 $(call import-module,cocos2dx/platform/third_party/android/modules/libpng)

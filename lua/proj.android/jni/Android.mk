@@ -6,6 +6,8 @@ LOCAL_MODULE    := lua_shared
 
 LOCAL_MODULE_FILENAME := liblua
 
+LOCAL_ARM_MODE := arm
+
 LOCAL_SRC_FILES :=../../lua/lapi.c \
                   ../../lua/lauxlib.c \
 		  ../../lua/lbaselib.c \
