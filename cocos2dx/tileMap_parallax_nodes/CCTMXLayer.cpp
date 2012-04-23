@@ -536,7 +536,7 @@ namespace cocos2d {
 		CCDictionary<std::string, CCObject*> *framesDict = (CCDictionary<std::string, CCObject*>*)dict->objectForKey(std::string("frames"));
 		framesDict->begin();
 		std::string key = "";
-		unsigned int keyIndex = 1;
+		unsigned int keyIndex = 0;
 		CCDictionary<std::string, CCObject*> *frameDict = NULL;
 		while( (frameDict = (CCDictionary<std::string, CCObject*>*)framesDict->next(&key)) )
 		{
@@ -546,18 +546,18 @@ namespace cocos2d {
 				CCRect rectInPixels = CCRectFromString(spFrame ? spFrame->m_sString.c_str() : "");
 				rect = CC_RECT_PIXELS_TO_POINTS(rectInPixels);
 
-				bool rotated = false;
+				//bool rotated = false;
 
-				CCString *spRotated = (CCString*)frameDict->objectForKey(std::string("rotated"));
-				rotated = atoi(spRotated ? spRotated->m_sString.c_str() : "") == 0 ? false : true;
+				//CCString *spRotated = (CCString*)frameDict->objectForKey(std::string("rotated"));
+				//rotated = atoi(spRotated ? spRotated->m_sString.c_str() : "") == 0 ? false : true;
 
-				CCString *spOffset = (CCString*)frameDict->objectForKey(std::string("offset"));
-				CCPoint offset = CCPointFromString(spOffset ? spOffset->m_sString.c_str() : "");
+				//CCString *spOffset = (CCString*)frameDict->objectForKey(std::string("offset"));
+				//CCPoint offset = CCPointFromString(spOffset ? spOffset->m_sString.c_str() : "");
 
-				anchorPoint = CCPointMake(offset.x / rect.size.width, offset.y / rect.size.height);
+				//anchorPoint = CCPointMake(offset.x / rect.size.width, offset.y / rect.size.height);
 
-				CCString *spSourceSize = (CCString*)frameDict->objectForKey(std::string("sourceSize"));
-				CCSize sourceSize = CCSizeFromString(spSourceSize ? spSourceSize->m_sString.c_str() : "");
+				//CCString *spSourceSize = (CCString*)frameDict->objectForKey(std::string("sourceSize"));
+				//CCSize sourceSize = CCSizeFromString(spSourceSize ? spSourceSize->m_sString.c_str() : "");
 
 				break;
 			}
