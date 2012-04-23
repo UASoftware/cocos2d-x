@@ -149,7 +149,7 @@ namespace cocos2d {
 		CCSprite* insertTileForGID(unsigned int gid, const CCPoint& pos);
 		CCSprite* updateTileForGID(unsigned int gid, const CCPoint& pos);
 
-		CCSprite* appendTileForGIDFromAtlas(unsigned int gid, const CCPoint& pos);
+		CCSprite* appendTileForGIDFromAtlas(CCDictionary<std::string, CCObject*> *dict, unsigned int gid, const CCPoint& pos);
 
 		/* The layer recognizes some special properties, like cc_vertez */
 		void parseInternalProperties();
