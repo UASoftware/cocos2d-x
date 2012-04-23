@@ -1127,7 +1127,7 @@
 		8B8E21DA1541D93200589795 /* gamemk.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = gamemk.sh; sourceTree = "<group>"; };
 		8B8E21DB1541D93200589795 /* gamestaticmk.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = gamestaticmk.sh; sourceTree = "<group>"; };
 		8B8E21DC1541D93200589795 /* mycopy_files.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = mycopy_files.sh; sourceTree = "<group>"; };
-		8B8E21DD1541D93200589795 /* ___PROJECTNAME___.mkb */ = {isa = PBXFileReference; lastKnownFileType = text; path = "___PROJECTNAME___.mkb"; sourceTree = "<group>"; };
+		8B8E21DD1541D93200589795 /* ___PROJECTNAME___.mkb */ = {isa = PBXFileReference; lastKnownFileType = text; path = ___PROJECTNAME___.mkb; sourceTree = "<group>"; };
 		8B8E21DF1541D93200589795 /* README.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
 		8B8E21E21541D93200589795 /* arial16.fnt */ = {isa = PBXFileReference; lastKnownFileType = text; path = arial16.fnt; sourceTree = "<group>"; };
 		8B8E21E31541D93200589795 /* arial16.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = arial16.png; sourceTree = "<group>"; };
