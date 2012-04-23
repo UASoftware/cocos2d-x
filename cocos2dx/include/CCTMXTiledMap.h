@@ -30,7 +30,7 @@ THE SOFTWARE.
 #include "CCTMXObjectGroup.h"
 
 #define MULTI_TILESETS_PER_LAYER	1
-#define ATLAS_INSTEAD_TILESET		0
+#define ATLAS_INSTEAD_TILESET		1
 
 namespace cocos2d {
 

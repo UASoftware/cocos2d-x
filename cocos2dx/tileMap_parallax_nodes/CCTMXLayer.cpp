@@ -276,6 +276,17 @@ namespace cocos2d {
 		// Parse cocos2d properties
 		this->parseInternalProperties();
 
+		std::string atlasName = m_pTileSet->m_sName;
+		atlasName = atlasName.append(".plist");
+
+		std::string sPath = "";
+		if (m_pTileSet->m_sExternalTilesetFilename.empty())
+			sPath = CCFileUtils::fullPathFromRelativePath(atlasName.c_str());
+		else
+			sPath = CCFileUtils::fullPathFromRelativeFile(atlasName.c_str(), m_pTileSet->m_sExternalTilesetFilename.c_str());
+
+		CCDictionary<std::string, CCObject*> *dict = CCFileUtils::dictionaryWithContentsOfFileThreadSafe(sPath.c_str());
+
 		for( unsigned int y=0; y < m_tLayerSize.height; y++ ) 
 		{
 			for( unsigned int x=0; x < m_tLayerSize.width; x++ ) 
@@ -292,7 +303,7 @@ namespace cocos2d {
 				// XXX: gid == 0 --> empty tile
 				if( gid != 0 ) 
 				{
-					this->appendTileForGIDFromAtlas(gid, ccp((float)x, (float)y));
+					this->appendTileForGIDFromAtlas(dict, gid, ccp((float)x, (float)y));
 
 					// Optimization: update min and max GID rendered by the layer
 					m_uMinGID = MIN(gid, m_uMinGID);
@@ -300,6 +311,9 @@ namespace cocos2d {
 				}
 			}
 		}
+
+		dict->release();
+
 #if MULTI_TILESETS_PER_LAYER == 0
 		CCAssert( m_uMaxGID >= m_pTileSet->m_uFirstGid &&
 			m_uMinGID >= m_pTileSet->m_uFirstGid, "TMX: Only 1 tilset per layer is supported");	
@@ -512,29 +526,14 @@ namespace cocos2d {
 
 	// used only when parsing the map. useless after the map was parsed
 	// since lot's of assumptions are no longer true
-	CCSprite * CCTMXLayer::appendTileForGIDFromAtlas(unsigned int gid, const CCPoint& pos)
+	CCSprite * CCTMXLayer::appendTileForGIDFromAtlas(CCDictionary<std::string, CCObject*> *dict, unsigned int gid, const CCPoint& pos)
 	{
 		unsigned int gidInside = gid - m_pTileSet->m_uFirstGid;
 
 		CCRect rect = CCRectMake(0,0,0,0);
 		CCPoint anchorPoint = CCPointMake(0,0);
 
-		std::string atlasName = m_pTileSet->m_sName;
-		atlasName = atlasName.append(".plist");
-
-		std::string sPath = "";
-		if (m_pTileSet->m_sExternalTilesetFilename.empty())
-		{
-			sPath = CCFileUtils::fullPathFromRelativePath(atlasName.c_str());
-		}
-		else
-		{
-			sPath = CCFileUtils::fullPathFromRelativeFile(atlasName.c_str(), m_pTileSet->m_sExternalTilesetFilename.c_str());
-		}
-
-		CCDictionary<std::string, CCObject*> *dict = CCFileUtils::dictionaryWithContentsOfFileThreadSafe(sPath.c_str());
 		CCDictionary<std::string, CCObject*> *framesDict = (CCDictionary<std::string, CCObject*>*)dict->objectForKey(std::string("frames"));
-
 		framesDict->begin();
 		std::string key = "";
 		unsigned int keyIndex = 1;
@@ -564,8 +563,6 @@ namespace cocos2d {
 			}
 			keyIndex++;
 		}
-
-		dict->release();
 
 		int z = (int)(pos.x + pos.y * m_tLayerSize.width);
 
