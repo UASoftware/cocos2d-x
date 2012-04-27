@@ -1,23 +1,16 @@
-#include "AppDelegate.h"
-
 #include "cocos2d.h"
+#include "CCEGLView.h"
+#include "AppDelegate.h"
+[! if CC_USE_LUA]
+#include "CCLuaEngine.h"
+[! else]
+#include "HelloWorldScene.h"
+[! endif]
 [! if CC_USE_COCOS_DENSHION_SIMPLE_AUDIO_ENGINE]
 #include "SimpleAudioEngine.h"
+
 using namespace CocosDenshion;
-
 [! endif]
-[! if !CC_USE_LUA]
-
-#include "HelloWorldScene.h"
-[! else]
-
-#if CC_LUA_ENGINE_ENABLED
-#include "CCLuaEngine.h"
-#endif
-
-[! endif]
-
-#include "CCEGLView.h"
 
 USING_NS_CC;
 
@@ -29,11 +22,6 @@ AppDelegate::~AppDelegate()
 {
 [! if CC_USE_COCOS_DENSHION_SIMPLE_AUDIO_ENGINE]
     SimpleAudioEngine::end();
-[! endif]
-[! if CC_USE_LUA]
-#if CC_LUA_ENGINE_ENABLED
-    CCLuaEngine::purgeSharedEngine();
-#endif
 [! endif]
 }
 
@@ -69,19 +57,6 @@ bool AppDelegate::initInstance()
 
 #endif  // CC_PLATFORM_ANDROID
 
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_WOPHONE)
-
-		// Initialize OpenGLView instance, that release by CCDirector when application terminate.
-		// The HelloWorld is designed as HVGA.
-		CCEGLView* pMainWnd = new CCEGLView(this);
-		CC_BREAK_IF(! pMainWnd || ! pMainWnd->Create(320,480, WM_WINDOW_ROTATE_MODE_CW));
-
-#ifndef _TRANZDA_VM_
-		// on wophone emulator, we copy resources files to Work7/NEWPLUS/TDA_DATA/Data/ folder instead of zip file
-		cocos2d::CCFileUtils::setResource("HelloWorld.zip");
-#endif
-
-#endif  // CC_PLATFORM_WOPHONE
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_MARMALADE)
 		// MaxAksenov said it's NOT a very elegant solution. I agree, haha
 		CCDirector::sharedDirector()->setDeviceOrientation(kCCDeviceOrientationLandscapeLeft);
@@ -133,8 +108,9 @@ bool AppDelegate::applicationDidFinishLaunching()
     pDirector->setAnimationInterval(1.0 / 60);
 
 [! if CC_USE_LUA]
-    // init lua engine
-    CCLuaEngine* pEngine = CCLuaEngine::sharedEngine();
+    // register lua engine
+    CCScriptEngineProtocol* pEngine = CCLuaEngine::engine();
+    CCScriptEngineManager::sharedManager()->setScriptEngine(pEngine);
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
     unsigned long size;
@@ -153,8 +129,9 @@ bool AppDelegate::applicationDidFinishLaunching()
     }
 #endif
 
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_IOS) || (CC_TARGET_PLATFORM == CC_PLATFORM_MARMALADE)
     string path = CCFileUtils::fullPathFromRelativePath("hello.lua");
+    pEngine->addSearchPath(path.substr(0, path.find_last_of("/")).c_str());
     pEngine->executeScriptFile(path.c_str());
 #endif
 [! else]
