@@ -135,7 +135,7 @@ void mouseButtonEventHandle(int iMouseID,int iMouseState) {
 			return;
 		}
 
-		s_pMainWindow->m_pTouch->SetTouchInfo(0, (float)(oPoint.x - s_pMainWindow->m_rcViewPort.origin.x) / s_pMainWindow->m_fScreenScaleFactor,
+		s_pMainWindow->m_pTouch->SetTouchInfo((float)(oPoint.x - s_pMainWindow->m_rcViewPort.origin.x) / s_pMainWindow->m_fScreenScaleFactor,
 				(float)(oPoint.y - s_pMainWindow->m_rcViewPort.origin.y) / s_pMainWindow->m_fScreenScaleFactor);
 		s_pMainWindow->m_pSet->addObject(s_pMainWindow->m_pTouch);
 		s_pMainWindow->m_mousePoint = oPoint;
@@ -156,7 +156,7 @@ void mousePosEventHandle(int iPosX,int iPosY) {
 	if (iButtonState == GLFW_PRESS) {
 		if (iPosX!=(int)s_pMainWindow->m_mousePoint.x||iPosY!=(int)s_pMainWindow->m_mousePoint.y) {
 			//it movies
-			s_pMainWindow->m_pTouch->SetTouchInfo(0, (float)(iPosX- s_pMainWindow->m_rcViewPort.origin.x) / s_pMainWindow->m_fScreenScaleFactor,
+			s_pMainWindow->m_pTouch->SetTouchInfo((float)(iPosX- s_pMainWindow->m_rcViewPort.origin.x) / s_pMainWindow->m_fScreenScaleFactor,
 					(float)(iPosY - s_pMainWindow->m_rcViewPort.origin.y) / s_pMainWindow->m_fScreenScaleFactor);
 			s_pMainWindow->m_pDelegate->touchesMoved(s_pMainWindow->m_pSet, NULL);
 			//update new mouse pos
@@ -276,6 +276,11 @@ CCSize CCEGLView::getSize()
 bool CCEGLView::isOpenGLReady()
 {
 	return bIsInit;
+}
+
+bool CCEGLView::isIpad()
+{
+    return false;
 }
 
 void CCEGLView::release()

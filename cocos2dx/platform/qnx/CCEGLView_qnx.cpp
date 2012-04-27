@@ -84,7 +84,7 @@ static CCTouch *s_pTouches[MAX_TOUCHES] = { NULL };
 static CCEGLView* s_pInstance = NULL;
 
 CCEGLView::CCEGLView()
-: m_pDelegate(NULL),
+: m_pDelegate(NULL), m_pEventHandler(NULL),
   m_fScreenScaleFactor(1.0),
   m_bNotHVGA(false),
   m_isWindowActive(false)
@@ -96,6 +96,8 @@ CCEGLView::CCEGLView()
     m_screenEvent = 0;
     m_screenWindow = 0;
 
+    strcpy(m_window_group_id, "");
+    snprintf(m_window_group_id, sizeof(m_window_group_id), "%d", getpid());
     bps_initialize();
     navigator_request_events(0);
 
@@ -571,6 +573,12 @@ bool CCEGLView::createNativeWindow(const EGLConfig &config)
 		return false;
 	}
 
+err = screen_create_window_group(m_screenWindow, m_window_group_id);
+	if (err)
+	{
+		fprintf(stderr, "screen_create_window_group");
+		return false;
+	}
 	format = chooseFormat(m_eglDisplay, config);
 	err = screen_set_window_property_iv(m_screenWindow, SCREEN_PROPERTY_FORMAT, &format);
 	if (err)
@@ -685,8 +693,6 @@ bool CCEGLView::createNativeWindow(const EGLConfig &config)
 	return true;
 }
 
-#define N_BPS_EVENTS 1
-
 bool CCEGLView::initGL()
 {
 	EGLConfig 			config;
@@ -727,10 +733,8 @@ bool CCEGLView::initGL()
 		return false;
 	}
 
-#ifdef BPS_EVENTS
 	// Request screen events
 	screen_request_events(m_screenContext);
-#endif
 
 	m_eglSurface = eglCreateWindowSurface(m_eglDisplay, config, m_screenWindow, NULL);
 	if (m_eglSurface == EGL_NO_SURFACE)
@@ -780,13 +784,18 @@ bool CCEGLView::isOpenGLReady()
 	return (m_isGLInitialized && m_sSizeInPixel.width != 0 && m_sSizeInPixel.height != 0);
 }
 
+bool CCEGLView::isIpad()
+{
+    return false;
+}
+
 void CCEGLView::release()
 {
 	if (!m_eglContext || !m_eglDisplay)
 		return;
-#ifdef BPS_EVENTS
+
 	screen_stop_events(m_screenContext);
-#endif
+
 	bps_shutdown();
 
 	screen_destroy_event(m_screenEvent);
@@ -808,6 +817,15 @@ void CCEGLView::release()
 	exit(0);
 }
 
+void CCEGLView::setEventHandler(EventHandler* pHandler)
+{
+	m_pEventHandler = pHandler;
+}
+
+const char* CCEGLView::getWindowGroupId() const
+{
+	return m_window_group_id;
+}
 void CCEGLView::setTouchDelegate(EGLTouchDelegate * pDelegate)
 {
 	m_pDelegate = pDelegate;
@@ -833,14 +851,12 @@ bool CCEGLView::HandleEvents()
 		rc = bps_get_event(&event, 1);
 		assert(rc == BPS_SUCCESS);
 
-#ifdef BPS_EVENTS
 		// break if no more events
 		if (event == NULL)
 			break;
-#else
-		if (event != NULL)
-		{
-#endif
+
+		if (m_pEventHandler && m_pEventHandler->HandleBPSEvent(event))
+			continue;
 
 		domain = bps_event_get_domain(event);
 
@@ -899,21 +915,10 @@ bool CCEGLView::HandleEvents()
 					break;
 			}
 		}
-		}
-#ifndef BPS_EVENTS
-		// for now handle screen events separately from BPS events
-		if (screen_get_event(m_screenContext, m_screenEvent, 0) < 0)
-		{
-			// we have an error condition in the screen event
-			break;
-		}
-		else
-		{
-#else
 		else if (domain == screen_get_domain())
 		{
 			m_screenEvent = screen_event_get_event(event);
-#endif
+
 			rc = screen_get_event_property_iv(m_screenEvent, SCREEN_PROPERTY_TYPE, &val);
 			if (rc || val == SCREEN_EVENT_NONE)
 				break;
@@ -934,7 +939,7 @@ bool CCEGLView::HandleEvents()
 						if (touch)
 						{
 							CCSet set;
-							touch->SetTouchInfo(0, ((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+							touch->SetTouchInfo(((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 												   ((float)(mtouch_event.y) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 							set.addObject(touch);
 							m_pDelegate->touchesEnded(&set, NULL);
@@ -966,7 +971,7 @@ bool CCEGLView::HandleEvents()
 						if (!touch)
 							touch = new CCTouch;
 
-						touch->SetTouchInfo(0, ((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+						touch->SetTouchInfo(((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 											   ((float)(mtouch_event.y) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 						s_pTouches[touch_id] = touch;
 
@@ -987,7 +992,7 @@ bool CCEGLView::HandleEvents()
 						if (touch)
 						{
 							CCSet set;
-							touch->SetTouchInfo(0, ((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+							touch->SetTouchInfo(((float)(mtouch_event.x) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 												   ((float)(mtouch_event.y) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 							set.addObject(touch);
 							m_pDelegate->touchesMoved(&set, NULL);
@@ -1017,7 +1022,7 @@ bool CCEGLView::HandleEvents()
 									if (touch)
 									{
 										CCSet set;
-										touch->SetTouchInfo(0, ((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+										touch->SetTouchInfo(((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 															   ((float)(pair[1]) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 										set.addObject(touch);
 										m_pDelegate->touchesMoved(&set, NULL);
@@ -1034,7 +1039,7 @@ bool CCEGLView::HandleEvents()
 									if (!touch)
 										touch = new CCTouch;
 
-									touch->SetTouchInfo(0, ((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+									touch->SetTouchInfo(((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 														   ((float)(pair[1]) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 									s_pTouches[touch_id] = touch;
 
@@ -1056,7 +1061,7 @@ bool CCEGLView::HandleEvents()
 									if (touch)
 									{
 										CCSet set;
-										touch->SetTouchInfo(0, ((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
+										touch->SetTouchInfo(((float)(pair[0]) - m_rcViewPort.origin.x) / m_fScreenScaleFactor,
 															   ((float)(pair[1]) - m_rcViewPort.origin.y) / m_fScreenScaleFactor);
 										set.addObject(touch);
 										m_pDelegate->touchesEnded(&set, NULL);

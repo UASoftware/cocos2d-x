@@ -140,16 +140,16 @@ void CCNode::setSkewX(float newSkewX)
 float CCNode::getSkewY()
 {
 	return m_fSkewY;
-	m_bIsTransformDirty = m_bIsInverseDirty = true;
-#if CC_NODE_TRANSFORM_USING_AFFINE_MATRIX
-	m_bIsTransformGLDirty = true;
-#endif
 }
 
 void CCNode::setSkewY(float newSkewY)
 {
 	m_fSkewY = newSkewY;
 
+	m_bIsTransformDirty = m_bIsInverseDirty = true;
+#if CC_NODE_TRANSFORM_USING_AFFINE_MATRIX
+	m_bIsTransformGLDirty = true;
+#endif
 }
 
 /// zOrder getter
@@ -1211,13 +1211,13 @@ CCPoint CCNode::convertToWindowSpace(const CCPoint& nodePoint)
 // convenience methods which take a CCTouch instead of CCPoint
 CCPoint CCNode::convertTouchToNodeSpace(CCTouch *touch)
 {
-	CCPoint point = touch->locationInView(touch->view());
+	CCPoint point = touch->locationInView();
 	point = CCDirector::sharedDirector()->convertToGL(point);
 	return this->convertToNodeSpace(point);
 }
 CCPoint CCNode::convertTouchToNodeSpaceAR(CCTouch *touch)
 {
-	CCPoint point = touch->locationInView(touch->view());
+	CCPoint point = touch->locationInView();
 	point = CCDirector::sharedDirector()->convertToGL(point);
 	return this->convertToNodeSpaceAR(point);
 }
