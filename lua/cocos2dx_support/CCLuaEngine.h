@@ -119,13 +119,13 @@ public:
     
     static CCLuaEngine* engine();
     
-private:
+protected:
     CCLuaEngine(void)
     : m_state(NULL)
     {
     }
     
-    bool init(void);
+    virtual bool init(void);
     bool pushFunctionByHandler(int nHandler);
     
     lua_State* m_state;
