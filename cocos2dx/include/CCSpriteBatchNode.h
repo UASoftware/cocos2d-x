@@ -55,6 +55,8 @@ namespace cocos2d
 	*/
 	class CC_DLL CCSpriteBatchNode : public CCNode, public CCTextureProtocol
 	{
+	protected:
+		CCSpriteBatchNode();
 	public:
 		~CCSpriteBatchNode();
 

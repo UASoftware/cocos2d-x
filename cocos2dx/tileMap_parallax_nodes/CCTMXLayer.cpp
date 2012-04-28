@@ -46,6 +46,10 @@ namespace cocos2d {
 			pRet->autorelease();
 			return pRet;
 		}
+		else
+		{
+			delete pRet;
+		}
 		return NULL;
 	}
 	bool CCTMXLayer::initWithTilesetInfo(CCTMXTilesetInfo *tilesetInfo, CCTMXLayerInfo *layerInfo, CCTMXMapInfo *mapInfo)
@@ -56,12 +60,12 @@ namespace cocos2d {
 		float capacity = totalNumberOfTiles * 0.35f + 1; // 35 percent is occupied ?
 
 		CCTexture2D *texture = NULL;
-		if( tilesetInfo )
+		if(tilesetInfo)
 		{
 			texture = CCTextureCache::sharedTextureCache()->addImage(tilesetInfo->m_sSourceImage.c_str());
 		}
 
-		if (CCSpriteBatchNode::initWithTexture(texture, (unsigned int)capacity))
+		if(texture && CCSpriteBatchNode::initWithTexture(texture, (unsigned int)capacity))
 		{
 			// layerInfo
 			m_sLayerName = layerInfo->m_sName;

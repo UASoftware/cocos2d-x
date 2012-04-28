@@ -224,17 +224,24 @@ namespace cocos2d{
 
 			CCTMXLayer *layer = NULL;
 
-			if (tileset && tileset->m_sAtlasSourceImage.empty())
+			if(tileset && tileset->m_sAtlasSourceImage.empty())
 			{
 				layer = CCTMXLayer::layerWithTilesetInfo(tileset, layerInfo, mapInfo);
-				layer->setupTiles();
+				if(layer)
+				{
+					layer->setupTiles();
+					layers->addObject(layer);
+				}
 			}
 			else
 			{
 				layer = CCTMXLayer::layerWithAtlasInfo(tileset, layerInfo, mapInfo);
-				layer->setupTilesWithAtlas();
+				if(layer)
+				{
+					layer->setupTilesWithAtlas();
+					layers->addObject(layer);
+				}
 			}
-			layers->addObject(layer);
 		}
 
 		tilesets->release();

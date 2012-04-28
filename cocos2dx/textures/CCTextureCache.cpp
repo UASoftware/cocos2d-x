@@ -354,9 +354,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
                 ccResolutionType resolution;
                 fullpath = CCFileUtils::fullPathFromRelativePath(fullpath.c_str(), &resolution);
 				texture = new CCTexture2D();
-				texture->initWithImage(&image, resolution);
-
-				if( texture )
+				if(texture->initWithImage(&image, resolution))
 				{
 #if CC_ENABLE_CACHE_TEXTTURE_DATA
                     // cache the texture file name
@@ -369,6 +367,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
 				}
 				else
 				{
+					texture = NULL;
 					CCLOG("cocos2d: Couldn't add image:%s in CCTextureCache", path);
 				}
 			}
@@ -384,9 +383,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
                 ccResolutionType resolution;
                 fullpath = CCFileUtils::fullPathFromRelativePath(fullpath.c_str(), &resolution);
 				texture = new CCTexture2D();
-				texture->initWithImage(&image, resolution);
-
-				if( texture )
+				if(texture->initWithImage(&image, resolution))
 				{
 #if CC_ENABLE_CACHE_TEXTTURE_DATA
                     // cache the texture file name
@@ -399,6 +396,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
 				}
 				else
 				{
+					texture = NULL;
 					CCLOG("cocos2d: Couldn't add image:%s in CCTextureCache", path);
 				}
 			}
