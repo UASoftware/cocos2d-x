@@ -107,6 +107,13 @@ namespace cocos2d
 		CCTexture2D *pTexture2D = CCTextureCache::sharedTextureCache()->addImage(fileImage);
 		return initWithTexture(pTexture2D, capacity);
 	}
+	
+	CCSpriteBatchNode::CCSpriteBatchNode()
+	:m_pobTextureAtlas(NULL)
+	,m_pobDescendants(NULL)
+	{
+		
+	}
 
 	CCSpriteBatchNode::~CCSpriteBatchNode()
 	{

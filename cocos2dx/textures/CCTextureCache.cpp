@@ -352,9 +352,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
                 CC_BREAK_IF(! image.initWithImageData((void*)pBuffer, nSize, CCImage::kFmtJpg));
 
 				texture = new CCTexture2D();
-				texture->initWithImage(&image);
-
-				if( texture )
+				if(texture->initWithImage(&image))
 				{
 #if CC_ENABLE_CACHE_TEXTTURE_DATA
                     // cache the texture file name
@@ -367,6 +365,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
 				}
 				else
 				{
+					texture = NULL;
 					CCLOG("cocos2d: Couldn't add image:%s in CCTextureCache", path);
 				}
 			}
@@ -380,9 +379,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
                 CC_BREAK_IF(! image.initWithImageData((void*)pBuffer, nSize, CCImage::kFmtPng));
 
 				texture = new CCTexture2D();
-				texture->initWithImage(&image);
-
-				if( texture )
+				if(texture->initWithImage(&image))
 				{
 #if CC_ENABLE_CACHE_TEXTTURE_DATA
                     // cache the texture file name
@@ -395,6 +392,7 @@ CCTexture2D * CCTextureCache::addImage(const char * path)
 				}
 				else
 				{
+					texture = NULL;
 					CCLOG("cocos2d: Couldn't add image:%s in CCTextureCache", path);
 				}
 			}
